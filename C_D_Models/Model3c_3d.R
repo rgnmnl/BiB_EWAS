@@ -1,0 +1,105 @@
+#########################################################################
+## Title: Model 3 EWAS
+## Version: 4.1 - Updated phenotype file; 
+##		additional analyses for significant cpg sites
+## Author: Regina Manansala
+## Date: 30-January-2020
+#########################################################################
+
+library(car)
+library(data.table)
+library(dplyr)
+library(tidyverse)
+library(qvalue)
+
+load("normalized_betas_kids_for_analysis.RData")
+load("CellCountsBloodgse35069Complete.Rdata")
+ph <- read.csv("bibgwas_27DEC2019.csv")
+#pcs <- fread("PC1-10.txt")
+
+#### Make sure the methylation and phenotype files are sorted exactly the same way.
+counts <- data.frame(counts)
+counts$sentrix <- rownames(counts)
+ph2 <- merge(ph, counts) %>% 
+  mutate(., R = as.factor(R), alpreg = as.factor(alpreg), bn_mtben = as.factor(bn_mtben), edufa = as.factor(edufa), 
+  edufa2 = as.factor(edufa2), edufa4c = as.factor(edufa4c), eduma = as.factor(eduma), eduma2 = as.factor(eduma2), 
+  eduma_di = as.factor(eduma_di), eduma4c = as.factor(eduma4c), empstma = as.factor(empstma), Eth9 = as.factor(Eth9), 
+  gender = as.factor(gender), MatSD = as.factor(MatSD), Marstat = as.factor(Marstat), quin07 = as.factor(quin07), 
+  quin07di = as.factor(quin07di), quin073c = as.factor(quin073c), smkpreg = as.factor(smkpreg), hsten = as.factor(hsten), 
+  tenure = as.factor(tenure), hsten2 = as.factor(hsten2), tenown2c = as.factor(tenown2c), tenown3c = as.factor(tenown3c), 
+  finsec = as.factor(finsec))
+betas <- norm.beta3 + 0.0001 
+M_val <- log2(betas/(1-betas))
+M_val <- M_val[, match(ph2$sentrix, colnames(M_val))]
+
+#########################################################################
+#########################################################################
+#########################################################################
+
+## Model 3c - With DNA Methylation data
+
+# Initialize results list
+results <- list()
+
+# Run model for each cpg site
+for(i in 1:nrow(M_val)){
+	x <- M_val[i,]
+	mod <- lm(x ~ relevel(ph2$eduma_di, ref = "2") + ph2$AgeMom + relevel(ph2$Eth9, ref = "1") + relevel(ph2$smkpreg, ref = "2") + relevel(ph2$alpreg, ref = "0") + ph2$BMImom + ph2$Bcell + ph2$CD4T + ph2$CD8T + ph2$Eos + ph2$Mono + ph2$Neu + ph2$NK)
+	results[[i]] <- summary(mod)$coef[2,]
+	if(i %in% c(1, nrow(M_val))) {
+		print(Sys.time())
+		print("Model 3c")
+	}
+}
+
+# Compile results list into data frame
+names(results) <- rownames(M_val)
+big_data <- do.call(rbind, results) %>% as.data.frame()
+names(big_data)[1:4] <- c("beta", "se", "t", "pvalue")
+
+# Calculate qvalue and filter by pvalue
+qval <- big_data %>% select(., pvalue) %>% qvalue() %>% `[[`("qvalues") %>% rename(qval = pvalue) %>% rownames_to_column('dnam_id')
+resq <- big_data %>% rownames_to_column('dnam_id') %>% left_join(., qval, by = "dnam_id") %>% subset(., qval <= 0.05)
+# write.table(resq, "Model3_New_Out/V4/model3c_qfilt_v4.txt", col.names=TRUE, row.names=FALSE, quote=FALSE, sep="\t")
+
+top50 <- big_data %>% rownames_to_column('dnam_id') %>% left_join(., qval, by = "dnam_id") %>% arrange(pvalue)
+# write.table(top50[1:50,], "Model3_New_Out/V4/model3c_top50_v4.txt", col.names=TRUE, row.names=FALSE, quote=FALSE, sep="\t")
+
+# Export model results to RData file
+save(list = ls(pattern = "results|big_data|qval|resq|top50"), file = "Model3_New_Out/V4/Model3c_unstrat_v4.RData")
+
+#########################################################################
+#########################################################################
+#########################################################################
+
+## Model 3d - With DNA Methylation data
+
+# Initialize results list
+results <- list()
+
+# Run model for each cpg site
+for(i in 1:nrow(M_val)){
+	x <- M_val[i,]
+	mod <- lm(x ~ relevel(ph2$eduma_di, ref = "2") + ph2$AgeMom + relevel(ph2$Eth9, ref = "1") + relevel(ph2$smkpreg, ref = "2") + relevel(ph2$alpreg, ref = "0") + ph2$BMImom + ph2$pregwks + ph2$Bwt + ph2$Bcell + ph2$CD4T + ph2$CD8T + ph2$Eos + ph2$Mono + ph2$Neu + ph2$NK)
+	results[[i]] <- summary(mod)$coef[2,]
+	if(i %in% c(1, nrow(M_val))) {
+		print(Sys.time())
+		print("Model 3d")
+	}
+}
+
+# Compile results list into data frame
+names(results) <- rownames(M_val)
+big_data <- do.call(rbind, results) %>% as.data.frame()
+names(big_data)[1:4] <- c("beta", "se", "t", "pvalue")
+
+# Calculate qvalue and filter by pvalue
+qval <- big_data %>% select(., pvalue) %>% qvalue() %>% `[[`("qvalues") %>% rename(qval = pvalue) %>% rownames_to_column('dnam_id')
+resq <- big_data %>% rownames_to_column('dnam_id') %>% left_join(., qval, by = "dnam_id") %>% subset(., qval <= 0.05)
+# write.table(resq, "Model3_New_Out/V4/model3d_qfilt_v4.txt", col.names=TRUE, row.names=FALSE, quote=FALSE, sep="\t")
+
+top50 <- big_data %>% rownames_to_column('dnam_id') %>% left_join(., qval, by = "dnam_id") %>% arrange(pvalue)
+# write.table(top50[1:50,], "Model3_New_Out/V4/model3d_top50_v4.txt", col.names=TRUE, row.names=FALSE, quote=FALSE, sep="\t")
+
+# Export model results to RData file
+save(list = ls(pattern = "results|big_data|qval|resq|top50"), file = "Model3_New_Out/V4/Model3d_unstrat_v4.RData")
