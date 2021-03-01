@@ -1,7 +1,8 @@
 #########################################################################
 ## Title: Model 6 EWAS
 ## Version: 3 
-## Note: Phenotype file changed from V2
+## Note: Phenotype file changed from V2. Main effect changed based on
+##		EWAS_analysis_planv4
 ## Author: Regina Manansala
 ## Date: 02-January-2020
 #########################################################################
