@@ -1,9 +1,10 @@
 #########################################################################
 ## Title: Model 12 EWAS
-## Version: 1 
-## Note: See EWAS_analysis_planv5annotated
+## Version: 2 
+## Note: Rerun to exclude duplicate samples identified in Feb 2020.
+##		See EWAS_analysis_planv5annotated
 ## Author: Regina Manansala
-## Date: 29-January-2020
+## Date: 21-February-2020
 #########################################################################
 
 library(car)
@@ -12,9 +13,9 @@ library(dplyr)
 library(tidyverse)
 library(qvalue)
 
-load("normalized_betas_kids_for_analysis.RData")
+load("M_val_IDsub.RData")
 load("CellCountsBloodgse35069Complete.Rdata")
-ph <- read.csv("bibgwas_16JAN2020.csv")
+ph <- read.csv("bibgwas_16JAN2020.csv") %>% subset(., !(sentrix %in% c("201057150183_R01C01", "201096090153_R05C01", "200992330056_R05C01", "201046290095_R08C01")))
 #pcs <- fread("PC1-10.txt")
 
 #### Make sure the methylation and phenotype files are sorted exactly the same way.
@@ -28,9 +29,7 @@ ph2 <- merge(ph, counts) %>%
   quin07 = as.factor(quin07), quin07di = as.factor(quin07di), quin073c = as.factor(quin073c), smkpreg = as.factor(smkpreg), 
   hsten = as.factor(hsten), tenure = as.factor(tenure), hsten2 = as.factor(hsten2), tenown2c = as.factor(tenown2c), 
   tenown3c = as.factor(tenown3c), finsec = as.factor(finsec))
-betas <- norm.beta3 + 0.0001 
-M_val <- log2(betas/(1-betas))
-M_val <- M_val[, match(ph2$sentrix, colnames(M_val))]
+M_val <- M_val_IDsub[, match(ph2$sentrix, colnames(M_val_IDsub))]
 
 #########################################################################
 #########################################################################
